@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package filetransfer;
+
+option go_package = "./";
+
+service FileService {
+    rpc Upload(stream FileChunk) returns (UploadStatus);
+}
+
+message FileChunk {
+    bytes content = 1;
+    int64 chunk_index = 2;
+    string file_hash = 3;
+}
+
+message UploadStatus {
+    bool success = 1;
+    string message = 2;
+    repeated int64 received_chunks = 3;
+}
