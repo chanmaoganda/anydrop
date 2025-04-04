@@ -12,7 +12,7 @@ import (
 
 func main() {
 	conn, err := grpc.NewClient("127.0.0.1:9000", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	
+
 	if err != nil {
 		log.Fatalln("cannot connect address")
 	}
@@ -22,9 +22,9 @@ func main() {
 	client := pb.NewFileServiceClient(conn)
 
 	status, err := client.Upload(context.Background(), &pb.FileChunk{
-		Content: []byte{},
+		Content:    []byte{},
 		ChunkIndex: 2,
-		FileHash: "20121",
+		FileHash:   "20121",
 	})
 
 	if err != nil {

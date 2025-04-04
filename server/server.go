@@ -17,8 +17,8 @@ type Server struct {
 func (s *Server) Upload(ctx context.Context, chunk *pb.FileChunk) (*pb.UploadStatus, error) {
 	fmt.Println("chunk get")
 	return &pb.UploadStatus{
-		Success: true,
-		Message: "good",
+		Success:        true,
+		Message:        "good",
 		ReceivedChunks: []int64{chunk.ChunkIndex},
 	}, nil
 }
