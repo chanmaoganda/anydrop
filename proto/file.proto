@@ -5,17 +5,17 @@ package filetransfer;
 option go_package = "../filetransfer";
 
 service FileService {
-    rpc Upload(FileChunk) returns (UploadStatus);
+    rpc Upload(stream FileChunk) returns (UploadStatus);
 }
 
 message FileChunk {
     bytes content = 1;
-    int64 chunk_index = 2;
+    int32 chunk_index = 2;
     string file_hash = 3;
 }
 
 message UploadStatus {
     bool success = 1;
     string message = 2;
-    repeated int64 received_chunks = 3;
+    repeated int32 received_chunks = 3;
 }

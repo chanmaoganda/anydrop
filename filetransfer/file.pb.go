@@ -24,7 +24,7 @@ const (
 type FileChunk struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Content       []byte                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
-	ChunkIndex    int64                  `protobuf:"varint,2,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
+	ChunkIndex    int32                  `protobuf:"varint,2,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
 	FileHash      string                 `protobuf:"bytes,3,opt,name=file_hash,json=fileHash,proto3" json:"file_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -67,7 +67,7 @@ func (x *FileChunk) GetContent() []byte {
 	return nil
 }
 
-func (x *FileChunk) GetChunkIndex() int64 {
+func (x *FileChunk) GetChunkIndex() int32 {
 	if x != nil {
 		return x.ChunkIndex
 	}
@@ -85,7 +85,7 @@ type UploadStatus struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Success        bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Message        string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	ReceivedChunks []int64                `protobuf:"varint,3,rep,packed,name=received_chunks,json=receivedChunks,proto3" json:"received_chunks,omitempty"`
+	ReceivedChunks []int32                `protobuf:"varint,3,rep,packed,name=received_chunks,json=receivedChunks,proto3" json:"received_chunks,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -134,7 +134,7 @@ func (x *UploadStatus) GetMessage() string {
 	return ""
 }
 
-func (x *UploadStatus) GetReceivedChunks() []int64 {
+func (x *UploadStatus) GetReceivedChunks() []int32 {
 	if x != nil {
 		return x.ReceivedChunks
 	}
@@ -149,15 +149,15 @@ const file_file_proto_rawDesc = "" +
 	"file.proto\x12\ffiletransfer\"c\n" +
 	"\tFileChunk\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\fR\acontent\x12\x1f\n" +
-	"\vchunk_index\x18\x02 \x01(\x03R\n" +
+	"\vchunk_index\x18\x02 \x01(\x05R\n" +
 	"chunkIndex\x12\x1b\n" +
 	"\tfile_hash\x18\x03 \x01(\tR\bfileHash\"k\n" +
 	"\fUploadStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12'\n" +
-	"\x0freceived_chunks\x18\x03 \x03(\x03R\x0ereceivedChunks2L\n" +
-	"\vFileService\x12=\n" +
-	"\x06Upload\x12\x17.filetransfer.FileChunk\x1a\x1a.filetransfer.UploadStatusB\x11Z\x0f../filetransferb\x06proto3"
+	"\x0freceived_chunks\x18\x03 \x03(\x05R\x0ereceivedChunks2N\n" +
+	"\vFileService\x12?\n" +
+	"\x06Upload\x12\x17.filetransfer.FileChunk\x1a\x1a.filetransfer.UploadStatus(\x01B\x11Z\x0f../filetransferb\x06proto3"
 
 var (
 	file_file_proto_rawDescOnce sync.Once
