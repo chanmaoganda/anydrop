@@ -12,6 +12,7 @@ import (
 
 func main() {
 	conn, err := grpc.NewClient("127.0.0.1:9000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	
 	if err != nil {
 		log.Fatalln("cannot connect address")
 	}

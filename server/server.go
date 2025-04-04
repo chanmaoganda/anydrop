@@ -37,6 +37,6 @@ func main() {
 	err = grpcServer.Serve(listen)
 
 	if err != nil {
-
+		log.Fatalln("")
 	}
 }
