@@ -12,6 +12,7 @@ message FileChunk {
     bytes content = 1;
     int32 chunk_index = 2;
     string file_hash = 3;
+    string file_name = 4;
 }
 
 message UploadStatus {

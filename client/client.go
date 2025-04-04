@@ -51,13 +51,14 @@ func UploadFile(client pb.FileServiceClient, filePath string, fileHash string) e
             Content:    buf[:n],
             ChunkIndex: int32(currIndex),
             FileHash:   fileHash,
+			FileName: file.Name(),
         }
 
 		if err := stream.Send(chunk); err != nil {
             log.Fatalf("Sending Error: %v", err)
         }
 
-        currIndex++
+        currIndex += 1
 	}
 
 	return nil
@@ -74,7 +75,7 @@ func main() {
 
 	client := pb.NewFileServiceClient(conn)
 
-	err = UploadFile(client, "./test.deb", "aaaaaa")
+	err = UploadFile(client, "./test.zip", "aaaaaa")
 
 	if err != nil {
 		log.Fatalln(err)

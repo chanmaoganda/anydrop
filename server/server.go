@@ -6,9 +6,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/chanmaoganda/anydrop/common"
 	pb "github.com/chanmaoganda/anydrop/filetransfer"
 	"google.golang.org/grpc"
 )
@@ -31,13 +33,21 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
 
     existChunks, err := CheckFolderStat(chunk.FileHash)
 
+    fileName := chunk.FileName
+    fileHash := chunk.FileHash
+
     if err != nil {
         return err
     }
 
-    chunkIndex := strconv.Itoa(int(chunk.ChunkIndex))
-    if !existChunks[chunkIndex] {
+    chunkName := fmt.Sprintf("%s%d", common.CHUNK_PREFIX, chunk.ChunkIndex)
+
+    if !existChunks[chunkName] {
+        
+        existChunks[chunkName] = true
+
         err = SaveChunk(chunk)
+
         if err != nil {
             return err
         }
@@ -47,15 +57,24 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
         chunk, err = stream.Recv()
 
         if err != nil {
+            err = RemakeFile(existChunks, fileHash, fileName)
+            if err != nil {
+                fmt.Println(err)
+            }
             return stream.SendAndClose(&pb.UploadStatus{
                 Success: true,
                 Message: "Upload Complete",
             })
         }
 
-        chunkIndex := strconv.Itoa(int(chunk.ChunkIndex))
-        if !existChunks[chunkIndex] {
+        chunkName := fmt.Sprintf("%s%d", common.CHUNK_PREFIX, chunk.ChunkIndex)
+
+        if !existChunks[chunkName] {
+
+            existChunks[chunkName] = true
+
             err = SaveChunk(chunk)
+
             if err != nil {
                 return err
             }
@@ -88,15 +107,14 @@ func CheckFolderStat(root string) (map[string]bool, error) {
     chunks := make(map[string]bool)
 
     for _, file := range fileInfo {
-        chunkIndex := strings.TrimPrefix(file.Name(), "chunk")
-        chunks[chunkIndex] = true
+        chunks[file.Name()] = true
     }
 
     return chunks, nil
 }
 
 func SaveChunk(chunk *pb.FileChunk) error {
-    file, err := os.Create(fmt.Sprintf("./%s/chunk%d", chunk.FileHash, chunk.ChunkIndex))
+    file, err := os.Create(fmt.Sprintf("./%s/%s%d", chunk.FileHash, common.CHUNK_PREFIX, chunk.ChunkIndex))
 
     if err != nil {
         return err
@@ -113,8 +131,44 @@ func SaveChunk(chunk *pb.FileChunk) error {
     return nil
 }
 
-func RemakeFile(chunks map[string]bool, ) {
+func RemakeFile(chunks map[string]bool, fileHash string, fileName string) error {
+    file, err := os.Create(fileName)
 
+    if err != nil {
+        return err
+    }
+
+    var sortChunks []int
+    for chunkName := range chunks {
+        indexString := strings.TrimPrefix(chunkName, common.CHUNK_PREFIX)
+        index, err := strconv.Atoi(indexString)
+
+        if err != nil {
+            return err
+        }
+        sortChunks = append(sortChunks, index)
+    }
+
+    sort.Ints(sortChunks)
+
+    for _, chunkIndex := range sortChunks {
+
+        chunkPath := fmt.Sprintf("./%s/%s%d", fileHash, common.CHUNK_PREFIX, chunkIndex)
+
+        chunkFile, err := os.Open(chunkPath)
+
+        if err != nil {
+            return err
+        }
+
+        _, err = io.Copy(file, chunkFile)
+
+        if err != nil {
+            return err
+        }
+    }
+    log.Printf("File %s Remade", fileName)
+    return file.Close()
 }
 
 func main() {

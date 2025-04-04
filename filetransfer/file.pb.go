@@ -26,6 +26,7 @@ type FileChunk struct {
 	Content       []byte                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
 	ChunkIndex    int32                  `protobuf:"varint,2,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
 	FileHash      string                 `protobuf:"bytes,3,opt,name=file_hash,json=fileHash,proto3" json:"file_hash,omitempty"`
+	FileName      string                 `protobuf:"bytes,4,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,6 +78,13 @@ func (x *FileChunk) GetChunkIndex() int32 {
 func (x *FileChunk) GetFileHash() string {
 	if x != nil {
 		return x.FileHash
+	}
+	return ""
+}
+
+func (x *FileChunk) GetFileName() string {
+	if x != nil {
+		return x.FileName
 	}
 	return ""
 }
@@ -146,12 +154,13 @@ var File_file_proto protoreflect.FileDescriptor
 const file_file_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"file.proto\x12\ffiletransfer\"c\n" +
+	"file.proto\x12\ffiletransfer\"\x80\x01\n" +
 	"\tFileChunk\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\fR\acontent\x12\x1f\n" +
 	"\vchunk_index\x18\x02 \x01(\x05R\n" +
 	"chunkIndex\x12\x1b\n" +
-	"\tfile_hash\x18\x03 \x01(\tR\bfileHash\"k\n" +
+	"\tfile_hash\x18\x03 \x01(\tR\bfileHash\x12\x1b\n" +
+	"\tfile_name\x18\x04 \x01(\tR\bfileName\"k\n" +
 	"\fUploadStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12'\n" +
