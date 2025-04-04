@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package filetransfer;
 
-option go_package = "./";
+option go_package = "../filetransfer";
 
 service FileService {
-    rpc Upload(stream FileChunk) returns (UploadStatus);
+    rpc Upload(FileChunk) returns (UploadStatus);
 }
 
 message FileChunk {

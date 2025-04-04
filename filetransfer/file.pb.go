@@ -4,7 +4,7 @@
 // 	protoc        v6.30.1
 // source: file.proto
 
-package __
+package filetransfer
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -155,9 +155,9 @@ const file_file_proto_rawDesc = "" +
 	"\fUploadStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12'\n" +
-	"\x0freceived_chunks\x18\x03 \x03(\x03R\x0ereceivedChunks2N\n" +
-	"\vFileService\x12?\n" +
-	"\x06Upload\x12\x17.filetransfer.FileChunk\x1a\x1a.filetransfer.UploadStatus(\x01B\x04Z\x02./b\x06proto3"
+	"\x0freceived_chunks\x18\x03 \x03(\x03R\x0ereceivedChunks2L\n" +
+	"\vFileService\x12=\n" +
+	"\x06Upload\x12\x17.filetransfer.FileChunk\x1a\x1a.filetransfer.UploadStatusB\x11Z\x0f../filetransferb\x06proto3"
 
 var (
 	file_file_proto_rawDescOnce sync.Once
