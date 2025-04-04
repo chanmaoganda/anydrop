@@ -8,9 +8,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 
-	"github.com/chanmaoganda/anydrop/common"
 	pb "github.com/chanmaoganda/anydrop/filetransfer"
 	"google.golang.org/grpc"
 )
@@ -40,11 +38,11 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
         return err
     }
 
-    chunkName := fmt.Sprintf("%s%d", common.CHUNK_PREFIX, chunk.ChunkIndex)
+    index := int(chunk.ChunkIndex)
 
-    if !existChunks[chunkName] {
+    if !existChunks[index] {
         
-        existChunks[chunkName] = true
+        existChunks[index] = true
 
         err = SaveChunk(chunk)
 
@@ -67,11 +65,11 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
             })
         }
 
-        chunkName := fmt.Sprintf("%s%d", common.CHUNK_PREFIX, chunk.ChunkIndex)
+        index := int(chunk.ChunkIndex)
 
-        if !existChunks[chunkName] {
+        if !existChunks[index] {
 
-            existChunks[chunkName] = true
+            existChunks[index] = true
 
             err = SaveChunk(chunk)
 
@@ -82,7 +80,7 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
     }
 }
 
-func CheckFolderStat(root string) (map[string]bool, error) {
+func CheckFolderStat(root string) (map[int]bool, error) {
     _, err := os.Stat(root)
 
     if err != nil {
@@ -95,26 +93,31 @@ func CheckFolderStat(root string) (map[string]bool, error) {
 
     if err != nil {
         fmt.Println(err)
-        return make(map[string]bool), err
+        return make(map[int]bool), err
     }
 
     fileInfo, err := f.ReadDir(-1)
 
     if err != nil {
-        return make(map[string]bool), err
+        return make(map[int]bool), err
     }
 
-    chunks := make(map[string]bool)
+    chunks := make(map[int]bool)
 
     for _, file := range fileInfo {
-        chunks[file.Name()] = true
+        index, err := strconv.Atoi(file.Name())
+        if err != nil {
+            return nil, err
+        }
+
+        chunks[index] = true
     }
 
     return chunks, nil
 }
 
 func SaveChunk(chunk *pb.FileChunk) error {
-    file, err := os.Create(fmt.Sprintf("./%s/%s%d", chunk.FileHash, common.CHUNK_PREFIX, chunk.ChunkIndex))
+    file, err := os.Create(fmt.Sprintf("./%s/%d", chunk.FileHash, chunk.ChunkIndex))
 
     if err != nil {
         return err
@@ -131,7 +134,7 @@ func SaveChunk(chunk *pb.FileChunk) error {
     return nil
 }
 
-func RemakeFile(chunks map[string]bool, fileHash string, fileName string) error {
+func RemakeFile(chunks map[int]bool, fileHash string, fileName string) error {
     file, err := os.Create(fileName)
 
     if err != nil {
@@ -139,21 +142,17 @@ func RemakeFile(chunks map[string]bool, fileHash string, fileName string) error 
     }
 
     var sortChunks []int
-    for chunkName := range chunks {
-        indexString := strings.TrimPrefix(chunkName, common.CHUNK_PREFIX)
-        index, err := strconv.Atoi(indexString)
-
-        if err != nil {
-            return err
-        }
+    for index := range chunks {
         sortChunks = append(sortChunks, index)
     }
 
     sort.Ints(sortChunks)
 
+    log.Printf("Remaking from %d chunks", len(sortChunks))
+
     for _, chunkIndex := range sortChunks {
 
-        chunkPath := fmt.Sprintf("./%s/%s%d", fileHash, common.CHUNK_PREFIX, chunkIndex)
+        chunkPath := fmt.Sprintf("./%s/%d", fileHash, chunkIndex)
 
         chunkFile, err := os.Open(chunkPath)
 

@@ -13,8 +13,14 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func UploadFile(client pb.FileServiceClient, filePath string, fileHash string) error {
+func UploadFile(client pb.FileServiceClient, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	checkSum, err := common.CheckSumSha256(filePath)
+
 	if err != nil {
 		return err
 	}
@@ -41,30 +47,33 @@ func UploadFile(client pb.FileServiceClient, filePath string, fileHash string) e
 		n, err := file.Read(buf)
 
 		if err == io.EOF {
-            break
-        }
-        if err != nil {
-            log.Fatalf("ReadFile Error: %v", err)
-        }
+			break
+		}
+
+		if err != nil {
+			log.Fatalf("ReadFile Error: %v", err)
+		}
 
 		chunk := &pb.FileChunk{
-            Content:    buf[:n],
-            ChunkIndex: int32(currIndex),
-            FileHash:   fileHash,
-			FileName: file.Name(),
-        }
+			Content:    buf[:n],
+			ChunkIndex: int32(currIndex),
+			FileHash:   checkSum,
+			FileName:   file.Name(),
+		}
 
 		if err := stream.Send(chunk); err != nil {
-            log.Fatalf("Sending Error: %v", err)
-        }
+			log.Fatalf("Sending Error: %v", err)
+		}
 
-        currIndex += 1
+		currIndex += 1
 	}
-
+	log.Printf("%d Chunks Sent", currIndex)
 	return nil
 }
 
 func main() {
+	filePath := os.Args[1]
+
 	conn, err := grpc.NewClient("127.0.0.1:9000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -75,7 +84,7 @@ func main() {
 
 	client := pb.NewFileServiceClient(conn)
 
-	err = UploadFile(client, "./test.zip", "aaaaaa")
+	err = UploadFile(client, filePath)
 
 	if err != nil {
 		log.Fatalln(err)
