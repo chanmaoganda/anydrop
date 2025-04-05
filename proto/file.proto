@@ -5,18 +5,32 @@ package filetransfer;
 option go_package = "../filetransfer";
 
 service FileService {
+    rpc QueryPlan(FileMeta) returns (UploadPlan);
     rpc Upload(stream FileChunk) returns (UploadStatus);
+    rpc MakeFile(FileMeta) returns (UploadStatus);
 }
 
 message FileChunk {
     bytes content = 1;
     int32 chunk_index = 2;
-    string file_hash = 3;
-    string file_name = 4;
+    int32 planned = 3;
+    string file_hash = 4;
+    string file_name = 5;
 }
 
 message UploadStatus {
     bool success = 1;
     string message = 2;
-    repeated int32 received_chunks = 3;
+    int32 received_chunks = 3;
+}
+
+message FileMeta {
+    string file_name = 1;
+    string file_hash = 2;
+    int32 planned_chunks = 3;
+}
+
+message UploadPlan {
+    string file_hash = 1;
+    repeated int32 needed_chunks = 2;
 }

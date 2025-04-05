@@ -19,14 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FileService_Upload_FullMethodName = "/filetransfer.FileService/Upload"
+	FileService_QueryPlan_FullMethodName = "/filetransfer.FileService/QueryPlan"
+	FileService_Upload_FullMethodName    = "/filetransfer.FileService/Upload"
+	FileService_MakeFile_FullMethodName  = "/filetransfer.FileService/MakeFile"
 )
 
 // FileServiceClient is the client API for FileService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FileServiceClient interface {
+	QueryPlan(ctx context.Context, in *FileMeta, opts ...grpc.CallOption) (*UploadPlan, error)
 	Upload(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[FileChunk, UploadStatus], error)
+	MakeFile(ctx context.Context, in *FileMeta, opts ...grpc.CallOption) (*UploadStatus, error)
 }
 
 type fileServiceClient struct {
@@ -35,6 +39,16 @@ type fileServiceClient struct {
 
 func NewFileServiceClient(cc grpc.ClientConnInterface) FileServiceClient {
 	return &fileServiceClient{cc}
+}
+
+func (c *fileServiceClient) QueryPlan(ctx context.Context, in *FileMeta, opts ...grpc.CallOption) (*UploadPlan, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadPlan)
+	err := c.cc.Invoke(ctx, FileService_QueryPlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *fileServiceClient) Upload(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[FileChunk, UploadStatus], error) {
@@ -50,11 +64,23 @@ func (c *fileServiceClient) Upload(ctx context.Context, opts ...grpc.CallOption)
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FileService_UploadClient = grpc.ClientStreamingClient[FileChunk, UploadStatus]
 
+func (c *fileServiceClient) MakeFile(ctx context.Context, in *FileMeta, opts ...grpc.CallOption) (*UploadStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadStatus)
+	err := c.cc.Invoke(ctx, FileService_MakeFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility.
 type FileServiceServer interface {
+	QueryPlan(context.Context, *FileMeta) (*UploadPlan, error)
 	Upload(grpc.ClientStreamingServer[FileChunk, UploadStatus]) error
+	MakeFile(context.Context, *FileMeta) (*UploadStatus, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
 
@@ -65,8 +91,14 @@ type FileServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFileServiceServer struct{}
 
+func (UnimplementedFileServiceServer) QueryPlan(context.Context, *FileMeta) (*UploadPlan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryPlan not implemented")
+}
 func (UnimplementedFileServiceServer) Upload(grpc.ClientStreamingServer[FileChunk, UploadStatus]) error {
 	return status.Errorf(codes.Unimplemented, "method Upload not implemented")
+}
+func (UnimplementedFileServiceServer) MakeFile(context.Context, *FileMeta) (*UploadStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MakeFile not implemented")
 }
 func (UnimplementedFileServiceServer) mustEmbedUnimplementedFileServiceServer() {}
 func (UnimplementedFileServiceServer) testEmbeddedByValue()                     {}
@@ -89,6 +121,24 @@ func RegisterFileServiceServer(s grpc.ServiceRegistrar, srv FileServiceServer) {
 	s.RegisterService(&FileService_ServiceDesc, srv)
 }
 
+func _FileService_QueryPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileMeta)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileServiceServer).QueryPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FileService_QueryPlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileServiceServer).QueryPlan(ctx, req.(*FileMeta))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FileService_Upload_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(FileServiceServer).Upload(&grpc.GenericServerStream[FileChunk, UploadStatus]{ServerStream: stream})
 }
@@ -96,13 +146,40 @@ func _FileService_Upload_Handler(srv interface{}, stream grpc.ServerStream) erro
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FileService_UploadServer = grpc.ClientStreamingServer[FileChunk, UploadStatus]
 
+func _FileService_MakeFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileMeta)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileServiceServer).MakeFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FileService_MakeFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileServiceServer).MakeFile(ctx, req.(*FileMeta))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FileService_ServiceDesc is the grpc.ServiceDesc for FileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var FileService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "filetransfer.FileService",
 	HandlerType: (*FileServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "QueryPlan",
+			Handler:    _FileService_QueryPlan_Handler,
+		},
+		{
+			MethodName: "MakeFile",
+			Handler:    _FileService_MakeFile_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Upload",

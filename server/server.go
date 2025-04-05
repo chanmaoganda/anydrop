@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 
 	pb "github.com/chanmaoganda/anydrop/filetransfer"
@@ -17,32 +18,53 @@ type Server struct {
 	pb.UnimplementedFileServiceServer
 }
 
+func (s *Server) QueryPlan(ctx context.Context, fileMeta *pb.FileMeta) (*pb.UploadPlan, error) {
+    fileHash := fileMeta.GetFileHash()
+    plannedChunks := fileMeta.GetPlannedChunks()
+
+    existingChunks, err := CheckFolderStat(fileHash)
+    if err != nil {
+        return nil, err
+    }
+
+    needChunks := make([]int32, 0)
+
+    for value := range plannedChunks {
+        if existingChunks[value] {
+            continue
+        }
+
+        needChunks = append(needChunks, value)
+    }
+
+    plan := &pb.UploadPlan{
+        FileHash: fileHash,
+        NeededChunks: needChunks,
+    }
+
+    return plan, nil
+}
+
 func (s* Server) Upload(stream pb.FileService_UploadServer) error {
 	fmt.Println("chunk get")
 
-    chunk, err := stream.Recv()
+    var fileHash string
 
-    if err == io.EOF {
-        return stream.SendAndClose(&pb.UploadStatus{
-            Success: true,
-            Message: "Upload Complete",
-        })
-    }
+    for {
+        chunk, err := stream.Recv()
 
-    existChunks, err := CheckFolderStat(chunk.FileHash)
+        if err == io.EOF {
+            break
+        }
 
-    fileName := chunk.FileName
-    fileHash := chunk.FileHash
+        if err != nil {
+            return stream.SendAndClose(&pb.UploadStatus{
+                Success: false,
+                Message: "Upload Incomplete",
+            })
+        }
 
-    if err != nil {
-        return err
-    }
-
-    index := int(chunk.ChunkIndex)
-
-    if !existChunks[index] {
-        
-        existChunks[index] = true
+        fileHash = chunk.FileHash
 
         err = SaveChunk(chunk)
 
@@ -51,36 +73,21 @@ func (s* Server) Upload(stream pb.FileService_UploadServer) error {
         }
     }
 
-    for {
-        chunk, err = stream.Recv()
-
-        if err != nil {
-            err = RemakeFile(existChunks, fileHash, fileName)
-            if err != nil {
-                fmt.Println(err)
-            }
-            return stream.SendAndClose(&pb.UploadStatus{
-                Success: true,
-                Message: "Upload Complete",
-            })
-        }
-
-        index := int(chunk.ChunkIndex)
-
-        if !existChunks[index] {
-
-            existChunks[index] = true
-
-            err = SaveChunk(chunk)
-
-            if err != nil {
-                return err
-            }
-        }
+    exists, err := CheckFolderStat(fileHash)
+    if err != nil {
+        return err
     }
+
+    status := &pb.UploadStatus{
+        Success: true,
+        Message: "Upload Complete",
+        ReceivedChunks: int32(len(exists)),
+    }
+
+    return stream.SendAndClose(status)
 }
 
-func CheckFolderStat(root string) (map[int]bool, error) {
+func CheckFolderStat(root string) (map[int32]bool, error) {
     _, err := os.Stat(root)
 
     if err != nil {
@@ -93,16 +100,16 @@ func CheckFolderStat(root string) (map[int]bool, error) {
 
     if err != nil {
         fmt.Println(err)
-        return make(map[int]bool), err
+        return make(map[int32]bool), err
     }
 
     fileInfo, err := f.ReadDir(-1)
 
     if err != nil {
-        return make(map[int]bool), err
+        return make(map[int32]bool), err
     }
 
-    chunks := make(map[int]bool)
+    chunks := make(map[int32]bool)
 
     for _, file := range fileInfo {
         index, err := strconv.Atoi(file.Name())
@@ -110,7 +117,7 @@ func CheckFolderStat(root string) (map[int]bool, error) {
             return nil, err
         }
 
-        chunks[index] = true
+        chunks[int32(index)] = true
     }
 
     return chunks, nil
@@ -134,43 +141,70 @@ func SaveChunk(chunk *pb.FileChunk) error {
     return nil
 }
 
-func RemakeFile(chunks map[int]bool, fileHash string, fileName string) error {
-    file, err := os.Create(fileName)
+func (s *Server) MakeFile(ctx context.Context, fileMeta *pb.FileMeta) (*pb.UploadStatus, error) {
+    existingChunks, err := CheckFolderStat(fileMeta.GetFileHash())
+    if err != nil {
+        return nil, err
+    }
+
+    totalChunks := int32(len(existingChunks))
+
+    if totalChunks != fileMeta.GetPlannedChunks() {
+        return &pb.UploadStatus{
+            Success: false,
+            Message: "Missing or Breaking Chunks",
+            ReceivedChunks: totalChunks,
+        }, nil
+    }
+
+    file, err := os.Create(fileMeta.GetFileName())
 
     if err != nil {
-        return err
+        return nil, err
     }
 
-    var sortChunks []int
-    for index := range chunks {
-        sortChunks = append(sortChunks, index)
-    }
+    sortedChunks := ToSortedList(existingChunks)
 
-    sort.Ints(sortChunks)
+    for _, chunkIndex := range sortedChunks {
 
-    log.Printf("Remaking from %d chunks", len(sortChunks))
-
-    for _, chunkIndex := range sortChunks {
-
-        chunkPath := fmt.Sprintf("./%s/%d", fileHash, chunkIndex)
+        chunkPath := fmt.Sprintf("./%s/%d", fileMeta.GetFileHash(), chunkIndex)
 
         chunkFile, err := os.Open(chunkPath)
 
         if err != nil {
-            return err
+            return nil, err
         }
 
         _, err = io.Copy(file, chunkFile)
 
         if err != nil {
-            return err
+            return nil, err
         }
     }
-    log.Printf("File %s Remade", fileName)
-    return file.Close()
+
+    log.Printf("File %s Remade", fileMeta.GetFileName())
+
+    return &pb.UploadStatus{
+        Success: true,
+        Message: "Remake successful",
+        ReceivedChunks: totalChunks,
+    }, nil
+}
+
+func ToSortedList(mapper map[int32]bool) []int32 {
+    list := make([]int32, 0)
+    for key := range mapper {
+        list = append(list, key)
+    }
+
+    slices.Sort(list)
+
+    return list
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	listen, err := net.Listen("tcp", "127.0.0.1:9000")
 
 	if err != nil {
