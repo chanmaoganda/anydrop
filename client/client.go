@@ -2,18 +2,21 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"math"
 	"os"
+	"time"
 
 	"github.com/chanmaoganda/anydrop/common"
 	pb "github.com/chanmaoganda/anydrop/filetransfer"
+	"github.com/hashicorp/mdns"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func QueryFilePlan(client pb.FileServiceClient, filePath string, plannedChunks int32) (*pb.UploadPlan, error) {
+func QueryFilePlan(client pb.FileServiceClient, filePath string, plannedChunks int32, needRemake bool) (*pb.UploadPlan, error) {
 	file, err := os.OpenFile(filePath, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -29,6 +32,7 @@ func QueryFilePlan(client pb.FileServiceClient, filePath string, plannedChunks i
 		FileHash: checkSum,
 		FileName: file.Name(),
 		PlannedChunks: plannedChunks,
+		Remake: needRemake,
 	})
 }
 
@@ -45,9 +49,19 @@ func UploadFile(client pb.FileServiceClient, filePath string) error {
 	plannedChunks := int32(math.Ceil(float64(info.Size()) / float64(common.CHUNK_SIZE)))
 
 	var checkSum string
+	var needRemake bool = false
 
 	for attempt := 0; attempt < int(common.RETRY_TIMES); attempt += 1 {
-		plan, err := QueryFilePlan(client, filePath, plannedChunks)
+		var innerRemakeFlag bool
+
+		// first attempt should be controlled by user desire, while in other attempts, remake is false
+		if attempt == 0 {
+			innerRemakeFlag = needRemake
+		} else {
+			innerRemakeFlag = false
+		}
+
+		plan, err := QueryFilePlan(client, filePath, plannedChunks, innerRemakeFlag)
 		if err != nil {
 			return err
 		}
@@ -134,15 +148,48 @@ func UploadChunk(client pb.FileServiceClient, plan *pb.UploadPlan, file *os.File
 	return stream.CloseAndRecv()
 }
 
+func DiscoverAndDialGRPC() (*mdns.ServiceEntry, error) {
+    entriesCh := make(chan *mdns.ServiceEntry, 3)
+
+    go func() {
+        err := mdns.Lookup(common.SERVICE_NAME, entriesCh)
+
+        if err != nil {
+            log.Println("❌ mDNS 查找失败:", err)
+        }
+    }()
+
+    var entry *mdns.ServiceEntry
+
+    select {
+		case entry = <-entriesCh:
+			log.Printf("🎯 发现服务: %s:%d\n", entry.AddrV4, entry.Port)
+			return entry, nil
+		case <-time.After(3 * time.Second):
+			return nil, nil
+	}
+}
+
 func main() {
+
 	filePath := os.Args[1]
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	conn, err := grpc.NewClient("127.0.0.1:9000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	entry, err := DiscoverAndDialGRPC()
 
 	if err != nil {
-		log.Fatalln("cannot connect address")
+		log.Fatalln(err)
+	}
+	
+	address := fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port)
+
+	// address = "127.0.0.1:60011"
+
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	
+	if err != nil {
+		log.Fatalln(err)
 	}
 
 	defer conn.Close()

@@ -162,6 +162,7 @@ type FileMeta struct {
 	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
 	FileHash      string                 `protobuf:"bytes,2,opt,name=file_hash,json=fileHash,proto3" json:"file_hash,omitempty"`
 	PlannedChunks int32                  `protobuf:"varint,3,opt,name=planned_chunks,json=plannedChunks,proto3" json:"planned_chunks,omitempty"`
+	Remake        bool                   `protobuf:"varint,4,opt,name=remake,proto3" json:"remake,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -215,6 +216,13 @@ func (x *FileMeta) GetPlannedChunks() int32 {
 		return x.PlannedChunks
 	}
 	return 0
+}
+
+func (x *FileMeta) GetRemake() bool {
+	if x != nil {
+		return x.Remake
+	}
+	return false
 }
 
 type UploadPlan struct {
@@ -285,11 +293,12 @@ const file_file_proto_rawDesc = "" +
 	"\fUploadStatus\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12'\n" +
-	"\x0freceived_chunks\x18\x03 \x01(\x05R\x0ereceivedChunks\"k\n" +
+	"\x0freceived_chunks\x18\x03 \x01(\x05R\x0ereceivedChunks\"\x83\x01\n" +
 	"\bFileMeta\x12\x1b\n" +
 	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12\x1b\n" +
 	"\tfile_hash\x18\x02 \x01(\tR\bfileHash\x12%\n" +
-	"\x0eplanned_chunks\x18\x03 \x01(\x05R\rplannedChunks\"N\n" +
+	"\x0eplanned_chunks\x18\x03 \x01(\x05R\rplannedChunks\x12\x16\n" +
+	"\x06remake\x18\x04 \x01(\bR\x06remake\"N\n" +
 	"\n" +
 	"UploadPlan\x12\x1b\n" +
 	"\tfile_hash\x18\x01 \x01(\tR\bfileHash\x12#\n" +
