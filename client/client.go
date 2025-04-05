@@ -29,10 +29,10 @@ func QueryFilePlan(client pb.FileServiceClient, filePath string, plannedChunks i
 	}
 
 	return client.QueryPlan(context.Background(), &pb.FileMeta{
-		FileHash: checkSum,
-		FileName: file.Name(),
+		FileHash:      checkSum,
+		FileName:      file.Name(),
 		PlannedChunks: plannedChunks,
-		Remake: needRemake,
+		Remake:        needRemake,
 	})
 }
 
@@ -84,8 +84,8 @@ func UploadFile(client pb.FileServiceClient, filePath string) error {
 	log.Printf("Chunks Successfully Sent\n")
 
 	status, err := client.MakeFile(context.Background(), &pb.FileMeta{
-		FileName: file.Name(),
-		FileHash: checkSum,
+		FileName:      file.Name(),
+		FileHash:      checkSum,
 		PlannedChunks: plannedChunks,
 	})
 
@@ -148,25 +148,25 @@ func UploadChunk(client pb.FileServiceClient, plan *pb.UploadPlan, file *os.File
 	return stream.CloseAndRecv()
 }
 
-func DiscoverAndDialGRPC() (*mdns.ServiceEntry, error) {
-    entriesCh := make(chan *mdns.ServiceEntry, 3)
+func MdnsGrpcEntry() (*mdns.ServiceEntry, error) {
+	entriesCh := make(chan *mdns.ServiceEntry, 3)
 
-    go func() {
-        err := mdns.Lookup(common.SERVICE_NAME, entriesCh)
+	go func() {
+		err := mdns.Lookup(common.SERVICE_NAME, entriesCh)
 
-        if err != nil {
-            log.Println("❌ mDNS 查找失败:", err)
-        }
-    }()
+		if err != nil {
+			log.Println("❌ mDNS Query Failed:", err)
+		}
+	}()
 
-    var entry *mdns.ServiceEntry
+	var entry *mdns.ServiceEntry
 
-    select {
-		case entry = <-entriesCh:
-			log.Printf("🎯 发现服务: %s:%d\n", entry.AddrV4, entry.Port)
-			return entry, nil
-		case <-time.After(3 * time.Second):
-			return nil, nil
+	select {
+	case entry = <-entriesCh:
+		log.Printf("🎯 Find Service!: [%s:%d]\n", entry.AddrV4, entry.Port)
+		return entry, nil
+	case <-time.After(3 * time.Second):
+		return nil, nil
 	}
 }
 
@@ -176,18 +176,19 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	entry, err := DiscoverAndDialGRPC()
+	entry, err := MdnsGrpcEntry()
 
 	if err != nil {
 		log.Fatalln(err)
 	}
-	
-	address := fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port)
 
-	// address = "127.0.0.1:60011"
+	// address := fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port)
+
+	_ = fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port) // for local test, discard remote entries
+	address := "127.0.0.1:60011"
 
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	
+
 	if err != nil {
 		log.Fatalln(err)
 	}

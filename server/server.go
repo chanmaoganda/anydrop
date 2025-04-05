@@ -233,26 +233,26 @@ func main() {
 
 	pb.RegisterFileServiceServer(grpcServer, &Server{})
 
-    // mDNS
-    host, _ := os.Hostname()
+	// mDNS
+	host, _ := os.Hostname()
 
-    info := []string{"AnyDrop, cmd tool to transfer files and messages"}
+	info := []string{"AnyDrop, cmd tool to transfer files and messages"}
 
-    service, err := mdns.NewMDNSService(host, common.SERVICE_NAME, common.DOMAIN, "", int(common.PORT), nil, info)
+	service, err := mdns.NewMDNSService(host, common.SERVICE_NAME, common.DOMAIN, "", int(common.PORT), nil, info)
 
-    if err != nil {
-        log.Fatalln(err)
-    }
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-    log.Println("ips ", service.IPs)
+	log.Println("ips ", service.IPs)
 
-    server, err := mdns.NewServer(&mdns.Config{Zone: service})
-    if err != nil {
-        log.Fatalln(err)
-    }
+	server, err := mdns.NewServer(&mdns.Config{Zone: service})
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-    defer server.Shutdown()
-    // end of mDNS
+	defer server.Shutdown()
+	// end of mDNS
 
 	err = grpcServer.Serve(listen)
 
