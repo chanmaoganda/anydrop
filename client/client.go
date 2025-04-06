@@ -165,8 +165,8 @@ func MdnsGrpcEntry() (*mdns.ServiceEntry, error) {
 	case entry = <-entriesCh:
 		log.Printf("🎯 Find Service!: [%s:%d]\n", entry.AddrV4, entry.Port)
 		return entry, nil
-	case <-time.After(3 * time.Second):
-		return nil, nil
+	case <-time.After(4 * time.Second):
+		return nil, fmt.Errorf("cannot find service")
 	}
 }
 
@@ -182,10 +182,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// address := fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port)
+	address := fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port)
 
-	_ = fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port) // for local test, discard remote entries
-	address := "127.0.0.1:60011"
+	// _ = fmt.Sprintf("%s:%d", entry.AddrV4, entry.Port) // for local test, discard remote entries
+	// address := "127.0.0.1:60011"
 
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 

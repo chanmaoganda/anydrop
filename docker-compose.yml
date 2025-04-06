@@ -1,0 +1,16 @@
+services:
+  alice:
+    image: ubuntu:22.04
+    volumes:
+      - ./bins:/app
+    tty: true
+    expose:
+      - 60011
+      
+  bison:
+    image: ubuntu:22.04
+    volumes:
+      - ./bins:/app
+    tty: true
+    expose:
+      - 60011
