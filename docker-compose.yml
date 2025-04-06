@@ -1,16 +1,19 @@
 services:
-  alice:
+  server:
     image: ubuntu:22.04
     volumes:
       - ./bins:/app
-    tty: true
     expose:
       - 60011
-      
-  bison:
+    working_dir: /app/caches
+    command: bash -c "/app/server"
+
+  client:
     image: ubuntu:22.04
     volumes:
       - ./bins:/app
-    tty: true
     expose:
       - 60011
+    # tty: true
+    working_dir: /app
+    command: bash -c "./client MapleMono-NF-unhinted.zip"

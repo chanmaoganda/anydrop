@@ -13,14 +13,14 @@ rm -r ${out}/${windows}/*
 GOOS=linux
 GOARCH=amd64
 
-go build -o ${out}/${linux}/client ../client/client.go 
-go build -o ${out}/${linux}/server ../server/server.go
+go build -o ${out}/${linux}/client ../cmd/client/client.go 
+go build -o ${out}/${linux}/server ../cmd/server/server.go
 
 GOOS=windows
 GOARCH=amd64
 
-go build -o ${out}/${windows}/client.exe ../client/client.go
-go build -o ${out}/${windows}/server.exe ../server/server.go
+go build -o ${out}/${windows}/client.exe ../cmd/client/client.go
+go build -o ${out}/${windows}/server.exe ../cmd/server/server.go
 
 cd $out
 
